@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>BOSS 关键词标注</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      width: 320px; margin: 0; padding: 14px;
+      font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 12px; color: #1b1f27; background: #fff;
+    }
+    h1 { font-size: 14px; margin: 0 0 3px; }
+    .sub { color: #8a91a1; font-size: 11px; margin-bottom: 11px; line-height: 1.5; }
+    label { display: block; font-weight: 600; margin-bottom: 4px; color: #39415a; }
+    input[type="text"] {
+      width: 100%; padding: 7px 9px; border: 1px solid #dde1e9; border-radius: 8px;
+      font-size: 12px; font-family: inherit; outline: none;
+    }
+    input[type="text"]:focus { border-color: #3b6ef5; box-shadow: 0 0 0 3px rgba(59,110,245,.12); }
+    .hint { color: #8a91a1; font-size: 10.5px; margin-top: 4px; line-height: 1.5; }
+    .field { margin-bottom: 11px; }
+    .stats {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+      background: #f6f7f9; border-radius: 10px; padding: 9px 6px; margin-bottom: 11px;
+    }
+    .stats .c { text-align: center; }
+    .stats b { display: block; font-size: 16px; line-height: 1.2; }
+    .stats span { font-size: 9.5px; color: #79808f; }
+    .stats .c.hi b { color: #d93025; }
+    .stats .c.ok b { color: #12a150; }
+    .stats .c.qs b { color: #7c3aed; }
+    .status {
+      border-radius: 8px; padding: 8px 10px; margin-bottom: 11px; line-height: 1.55;
+      background: #f0f4ff; color: #2b3446; border-left: 3px solid #3b6ef5;
+      max-height: 96px; overflow: auto; word-break: break-all; font-size: 11px;
+    }
+    .status.warn { background: #fdecea; border-left-color: #d93025; color: #8c1d18; }
+    .status.ok { background: #eaf7ee; border-left-color: #12a150; color: #17603a; }
+    .btns { display: flex; gap: 8px; }
+    button {
+      flex: 1; border: none; border-radius: 9px; padding: 9px 0; cursor: pointer;
+      font-size: 12.5px; font-weight: 600; font-family: inherit;
+      background: #eef1f6; color: #39415a; transition: .15s;
+    }
+    button:hover { background: #e2e7ef; }
+    button.primary { background: #d93025; color: #fff; }
+    button.primary:hover { background: #c02a20; }
+    .chk { display: flex; align-items: center; gap: 6px; color: #39415a; padding: 3px 0; font-weight: 400; }
+    .chk input { margin: 0; }
+    .chk.two { align-items: flex-start; }
+    .chk.two input { margin-top: 2px; }
+    .chk .d { display: block; color: #8a91a1; font-size: 10px; line-height: 1.45; margin-top: 1px; }
+    select {
+      flex: 1; padding: 6px 8px; border: 1px solid #dde1e9; border-radius: 8px;
+      font-size: 12px; font-family: inherit; background: #fff; outline: none;
+    }
+    select:focus { border-color: #3b6ef5; }
+    .frow { display: flex; gap: 8px; margin-bottom: 7px; align-items: center; }
+    .frow .fl { width: 48px; flex: none; color: #39415a; font-weight: 600; }
+    .fnum { display: flex; align-items: center; gap: 5px; flex: 1; color: #8a91a1; }
+    .fnum input { width: 64px; padding: 6px 8px; border: 1px solid #dde1e9; border-radius: 8px; font-size: 12px; outline: none; }
+    .fnum input:focus { border-color: #3b6ef5; }
+    .lvl {
+      display: flex; gap: 6px; margin-bottom: 11px;
+      background: #f6f7f9; border-radius: 10px; padding: 8px 9px; font-size: 10px; color: #667089;
+    }
+    .lvl span { flex: 1; text-align: center; line-height: 1.5; }
+    .lvl i { display: block; width: 100%; height: 4px; border-radius: 2px; margin-bottom: 4px; }
+    .lvl span.on { color: #1b1f27; font-weight: 600; }
+    .safe {
+      margin-top: 11px; padding: 8px 10px; border-radius: 8px; font-size: 10.5px;
+      background: #f4f6fa; color: #667089; line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <h1>BOSS 关键词标注</h1>
+  <div class="sub">把命中关键词的候选人圈出来给你看，<b>不点击任何按钮</b>，打招呼由你自己点。</div>
+
+  <div class="stats">
+    <div class="c"><b id="s1">–</b><span>本页候选人</span></div>
+    <div class="c hi"><b id="s2">–</b><span>命中</span></div>
+    <div class="c qs"><b id="s4">–</b><span>QS 名校</span></div>
+    <div class="c ok"><b id="s3">–</b><span>已打招呼</span></div>
+  </div>
+
+  <div class="status" id="status">正在读取当前页面…</div>
+
+  <div class="field">
+    <label>关键词（逗号分隔）</label>
+    <input type="text" id="keywords" placeholder="美股,投资者关系,IR" />
+    <div class="hint">英文短词按「整词」匹配，IR 不会误命中 first / their / IRR。</div>
+  </div>
+
+  <div class="field">
+    <label>框色分级（按命中的不同关键词个数）</label>
+    <div class="lvl">
+      <span id="g1"><i style="background:#2f6fed"></i>1 个<br /><b>0</b> 人</span>
+      <span id="g2"><i style="background:#e8890c"></i>2 个<br /><b>0</b> 人</span>
+      <span id="g3"><i style="background:#d93025"></i>3 个及以上<br /><b>0</b> 人</span>
+    </div>
+    <div class="hint">蓝 → 橙 → 红，颜色越深命中越多。</div>
+  </div>
+
+  <div class="field">
+    <label>QS 名校格外标记</label>
+    <label class="chk two">
+      <input type="checkbox" id="qsTop50" />
+      <span>QS 前 50 大学
+        <span class="d">命中后卡片外套<b>紫色</b>光环、角标加「🎓 QS50」徽标、清单整行变紫并排到最前。</span>
+      </span>
+    </label>
+    <label class="chk two">
+      <input type="checkbox" id="qsTop100" />
+      <span>QS 前 100 大学
+        <span class="d">含前 50；51–100 名用<b>青色</b>标记。勾上后即使没命中任何关键词，名校简历也会被单独标出来。</span>
+      </span>
+    </label>
+    <div class="hint">名单为 QS 2026 前 100（中英文名 + 常用简称），纯本地文本匹配。改名单直接编辑 extension/qs-rankings.js。</div>
+  </div>
+
+  <div class="field">
+    <label>免费筛选（对齐 VIP 筛选，不符合的打灰标）</label>
+    <div class="frow"><span class="fl">年龄</span>
+      <span class="fnum"><input type="text" id="ageMin" placeholder="如 25" /><span>–</span><input type="text" id="ageMax" placeholder="如 35" /><span>岁</span></span>
+    </div>
+    <div class="frow"><span class="fl">院校</span>
+      <select id="eduTier">
+        <option value="any">不限</option>
+        <option value="985">985 工程</option>
+        <option value="211">211 工程（含 985）</option>
+        <option value="qs100">QS 前 100（境内外）</option>
+      </select>
+    </div>
+    <div class="frow"><span class="fl">活跃度</span>
+      <select id="activityMin">
+        <option value="any">不限</option>
+        <option value="5">刚刚活跃</option>
+        <option value="4">今日活跃及以上</option>
+        <option value="3">3 日内活跃及以上</option>
+        <option value="2">本周活跃及以上</option>
+        <option value="1">本月活跃</option>
+      </select>
+    </div>
+    <div class="frow"><span class="fl">专业</span>
+      <input type="text" id="majorKw" placeholder="金融,财会（任一命中即符合）" />
+    </div>
+    <div class="hint">不符条件的卡片只画<b>灰色虚线框 + 「✗不符」小灰标</b>，不遮挡、不变灰任何内容。年龄/活跃度读自卡片文本与列表接口。（性别筛选已移除：BOSS 不提供可靠的列表性别数据，推断不准确）</div>
+  </div>
+
+  <div class="field">
+    <label>显示选项</label>
+    <label class="chk"><input type="checkbox" id="showBadge" /> 在卡片左上角显示「命中」角标</label>
+    <label class="chk two">
+      <input type="checkbox" id="highlightText" />
+      <span>标注关键词所在位置
+        <span class="d">页面文本里每处关键词都高亮；<b>打开详情浮层后同样持续标注</b>。</span>
+      </span>
+    </label>
+    <label class="chk two">
+      <input type="checkbox" id="highlightInCard" />
+      <span>卡片内部也逐词高亮
+        <span class="d">默认关：卡片已有整块框，再逐词高亮会比较花。</span>
+      </span>
+    </label>
+  </div>
+
+  <div class="btns">
+    <button class="primary" id="rescan">重新扫描</button>
+    <button id="show">显示标注</button>
+  </div>
+  <div class="btns" style="margin-top:8px">
+    <button id="diag">诊断本页</button>
+  </div>
+
+  <div class="safe">
+    本插件不派发任何鼠标事件、不点击页面元素、不改动页面 DOM，
+    只用只读方式读取页面文本与列表接口数据，再把标注画在独立的悬浮层上。<br />
+    QS 名校判断同样是本地文本比对，不联网、不查询任何外部接口（名单来自 QS 2026，硬编码在扩展里）。
+  </div>
+
+  <script src="qs-rankings.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

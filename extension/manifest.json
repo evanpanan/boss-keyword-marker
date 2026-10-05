@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "BOSS直聘 · 关键词标注（只标注不点击）",
+  "version": "2.0.0",
+  "description": "在 BOSS 直聘招聘端把命中关键词（美股 / 投资者关系 / IR）的候选人红框标出并列出清单。不点击任何按钮，打招呼由人工完成。",
+  "permissions": ["storage", "scripting", "tabs"],
+  "host_permissions": ["https://*.zhipin.com/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://*.zhipin.com/*"],
+      "js": ["inject.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://*.zhipin.com/*"],
+      "js": ["qs-rankings.js", "content.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "BOSS 关键词标注"
+  }
+}

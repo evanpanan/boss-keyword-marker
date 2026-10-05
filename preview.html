@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>关键词标注 · 配色预览 v4</title>
+<style>
+  :root{
+    --c1:#2f6fed; --c2:#e8890c; --c3:#d93025; --cok:#12a150;
+    --q50:#7c3aed; --q100:#0e7490;
+    --b1:rgba(47,111,237,.05); --b2:rgba(232,137,12,.07); --b3:rgba(217,48,37,.055);
+    --bq50:rgba(124,58,237,.055); --bq100:rgba(14,116,144,.055);
+    --gq50:rgba(124,58,237,.45); --gq100:rgba(14,116,144,.42);
+    --m1:rgba(47,111,237,.18); --m2:rgba(232,137,12,.20); --m3:rgba(217,48,37,.18);
+    --ink:#1b1f27; --mut:#79808f; --line:#e3e6ec;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:28px;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:#eef1f6; color:var(--ink); font-size:13px; line-height:1.6;
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+  h1{font-size:19px;margin:0 0 4px}
+  .lead{color:var(--mut);font-size:12.5px;margin-bottom:20px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:900px){.cols{grid-template-columns:1fr}}
+  .pane{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 16px 20px;
+        box-shadow:0 4px 16px rgba(20,28,45,.06)}
+  .pane h2{font-size:13px;margin:0 0 3px;font-weight:700}
+  .pane .sub{font-size:11px;color:var(--mut);margin-bottom:14px}
+  .divider{height:1px;background:#eef1f6;margin:20px 0}
+
+  /* ---- 候选人卡片 ---- */
+  .card{position:relative;border:2px solid var(--c1);background:var(--b1);border-radius:10px;
+        padding:13px 14px;margin-bottom:22px}
+  .card.l2{border-color:var(--c2);background:var(--b2)}
+  .card.l3{border-color:var(--c3);background:var(--b3)}
+  .card.done{outline:2px solid var(--cok);outline-offset:1px}
+  /* 名校：外圈再套一个光环；有关键词时边框仍走关键词分级色，信息不丢 */
+  .card.q50 {box-shadow:0 0 0 3px var(--gq50);  border-color:var(--q50);  background:var(--bq50)}
+  .card.q100{box-shadow:0 0 0 3px var(--gq100); border-color:var(--q100); background:var(--bq100)}
+  .card.l1.q50{border-color:var(--c1);background:var(--b1)}
+  .card.l2.q50{border-color:var(--c2);background:var(--b2)}
+  .card.l3.q50{border-color:var(--c3);background:var(--b3)}
+  .card.l1.q100{border-color:var(--c1);background:var(--b1)}
+  .card.l2.q100{border-color:var(--c2);background:var(--b2)}
+  .card.l3.q100{border-color:var(--c3);background:var(--b3)}
+
+  .badge{position:absolute;top:-9px;left:8px;display:flex;align-items:center;gap:5px;
+         font-size:11px;font-weight:600;line-height:1;padding:4px 6px 4px 8px;
+         border-radius:7px;color:#fff;background:var(--c1);box-shadow:0 2px 8px rgba(20,28,45,.22)}
+  .l2 .badge,.badge.l2{background:var(--c2)}
+  .l3 .badge,.badge.l3{background:var(--c3)}
+  .badge.done{background:var(--cok)}
+  .card.q50.qonly .badge{background:var(--q50)}
+  .card.q100.qonly .badge{background:var(--q100)}
+  .badge .sch{font-size:9.5px;font-weight:700;padding:2px 4px;border-radius:4px;
+              background:#fff;letter-spacing:.2px}
+  .badge .sch.s50{color:var(--q50)}
+  .badge .sch.s100{color:var(--q100)}
+  .badge .tick{font-size:11px;padding:1px 4px;border-radius:4px;background:rgba(255,255,255,.22)}
+  .who{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}
+  .who b{font-size:14px}
+  .who span{font-size:11px;color:var(--mut)}
+  .meta{font-size:12px;color:#39415a;margin-bottom:3px}
+
+  /* ---- 关键词高亮 ---- */
+  mark{margin:0;padding:0 1px;border-radius:3px;color:inherit;
+       background:var(--m1);border-bottom:2px solid var(--c1);font-weight:600}
+  mark.l2{background:var(--m2);border-bottom-color:var(--c2)}
+  mark.l3{background:var(--m3);border-bottom-color:var(--c3)}
+
+  /* ---- 详情浮层 ---- */
+  .detail{position:relative;border:2px dashed var(--c3);border-radius:10px;padding:30px 14px 14px;
+          background:#fff;box-shadow:0 0 0 3px var(--gq50)}
+  .dtbadge{position:absolute;top:6px;left:8px;font-size:10.5px;font-weight:600;color:#fff;
+           background:var(--c3);border-radius:7px;padding:3px 7px;opacity:.96;
+           display:flex;align-items:center;gap:4px}
+  .detail h3{font-size:13.5px;margin:0 0 8px}
+  .sec{margin-bottom:11px}
+  .sec .t{font-size:11px;color:var(--mut);margin-bottom:3px}
+  .sec .b{font-size:12.5px;color:#39415a}
+  .hr{height:1px;background:#eef1f6;margin:11px 0}
+
+  /* ---- 右下角清单面板 ---- */
+  .panel{border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:12px;
+         box-shadow:0 6px 20px rgba(20,28,45,.10)}
+  .hd{display:flex;align-items:center;gap:7px;padding:9px 11px;background:#0f1724;color:#fff}
+  .dot{width:8px;height:8px;border-radius:50%;background:#d93025;box-shadow:0 0 0 3px rgba(217,48,37,.2)}
+  .hd .ttl{font-weight:600;font-size:12px}
+  .hd .sp{flex:1}
+  .hd .ico{width:21px;height:21px;line-height:19px;text-align:center;border-radius:6px;
+           background:rgba(255,255,255,.1);font-size:13px}
+  .bd{padding:9px 11px 11px}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:7px}
+  .cell{background:#f6f7f9;border-radius:8px;padding:6px 2px;text-align:center}
+  .cell b{display:block;font-size:15px;line-height:1.25}
+  .cell span{font-size:9px;color:var(--mut)}
+  .cell.hi b{color:var(--c3)} .cell.ok b{color:var(--cok)} .cell.qs b{color:var(--q50)}
+  .lgbar{display:flex;gap:7px;font-size:9.5px;color:var(--mut);margin-bottom:6px;
+         background:#f6f7f9;border-radius:7px;padding:5px 7px}
+  .lgbar i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:3px;vertical-align:-1px}
+  .lgbar b{color:var(--ink)}
+  .list{border-top:1px dashed #e6e8ee;padding-top:6px;max-height:230px;overflow:auto}
+  .row{display:flex;align-items:center;gap:6px;padding:4px 4px 4px 7px;border-radius:6px}
+  .pin{width:8px;height:8px;border-radius:2px;flex:none}
+  .row .nm{font-weight:600;min-width:42px}
+  .row .kwt{flex:1;font-size:10.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mut)}
+  .row button{border:none;border-radius:5px;font-size:10.5px;padding:3px 7px;font-family:inherit;
+              background:#eef1f6;color:#39415a}
+  .row.s50{background:rgba(124,58,237,.075);box-shadow:inset 3px 0 0 var(--q50)}
+  .row.s100{background:rgba(14,116,144,.075);box-shadow:inset 3px 0 0 var(--q100)}
+  .row.s50 .nm,.row.s50 .kwt{color:#5b21b6}
+  .row.s100 .nm,.row.s100 .kwt{color:#0e7490}
+  .row.lv2{background:rgba(232,137,12,.08);box-shadow:inset 3px 0 0 var(--c2)}
+  .row.lv2 .nm,.row.lv2 .kwt{color:#a05e00}
+  .row.lv3{background:rgba(217,48,37,.075);box-shadow:inset 3px 0 0 var(--c3)}
+  .row.lv3 .nm,.row.lv3 .kwt{color:#c02a20}
+  .row.lv1{background:rgba(47,111,237,.06);box-shadow:inset 3px 0 0 var(--c1)}
+  .row.lv1 .nm,.row.lv1 .kwt{color:#1a56c4}
+
+  /* ---- 图例 ---- */
+  .lg{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:18px 0 0}
+  @media(max-width:900px){.lg{grid-template-columns:repeat(2,1fr)}}
+  .lg div{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .lg i{display:block;height:5px;border-radius:3px;margin-bottom:7px}
+  .lg b{font-size:12.5px}
+  .lg span{display:block;font-size:11px;color:var(--mut)}
+  .note{margin-top:18px;background:#f4f6fa;border-radius:10px;padding:12px 14px;
+        font-size:11.5px;color:#667089;line-height:1.7}
+  .note b{color:var(--ink)}
+  code{background:#eef1f6;border-radius:4px;padding:1px 5px;font-size:11px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>关键词标注 · 配色预览 v4</h1>
+  <div class="lead">
+    框色由<b>命中的「不同关键词」个数</b>决定（<code>IR</code> 出现 5 次也只算 1 个词）；
+    勾选 QS 名校后，名校简历会额外套一圈<b>校色光环</b>并在角标前加 🎓 徽标 ——
+    前 50 紫、前 100 青，与关键词三色互不干扰。
+  </div>
+
+  <div class="cols">
+    <!-- 左：列表 -->
+    <div class="pane">
+      <h2>候选人列表</h2>
+      <div class="sub">边框 = 关键词命中分级；外圈光环 = QS 名校</div>
+
+      <div class="card l1">
+        <div class="badge">命中 · 投资者关系</div>
+        <div class="who"><b>张女士</b><span>5 年 · 硕士 · 在职</span></div>
+        <div class="meta">期望职位：<mark>投资者关系</mark> / 证券事务代表</div>
+        <div class="meta">期望城市：深圳 · 面议</div>
+      </div>
+
+      <div class="card l2">
+        <div class="badge">命中 2 词 · 美股/IR</div>
+        <div class="who"><b>李先生</b><span>7 年 · 本科 · 离职-随时到岗</span></div>
+        <div class="meta">有<mark class="l2">美股</mark>上市及<mark class="l2">IR</mark>全流程经验，主导过 IPO 路演材料</div>
+      </div>
+
+      <div class="card l3">
+        <div class="badge">命中 3 词 · 美股/IR/投资者关系</div>
+        <div class="who"><b>王女士</b><span>9 年 · 硕士 · 在职</span></div>
+        <div class="meta"><mark class="l3">美股</mark>上市公司<mark class="l3">投资者关系</mark>负责人，统筹<mark class="l3">IR</mark>与资本市场沟通</div>
+      </div>
+
+      <div class="card l3 done" style="margin-bottom:22px">
+        <div class="badge done">已打招呼 · 美股/IR/投资者关系</div>
+        <div class="who"><b>陈先生</b><span>8 年 · 硕士</span></div>
+        <div class="meta"><mark class="l3">美股</mark> <mark class="l3">IR</mark> <mark class="l3">投资者关系</mark>相关经验</div>
+      </div>
+
+      <div class="sub" style="margin:0 0 14px">↓ 勾选 QS 名校后新增的三种样式</div>
+
+      <div class="card l2 q50">
+        <div class="badge"><span class="sch s50">🎓 QS50</span>命中 2 词 · 美股/IR</div>
+        <div class="who"><b>刘女士</b><span>6 年 · 硕士 · 在职</span></div>
+        <div class="meta">↑ 外圈<span style="color:var(--q50);font-weight:600">紫色光环</span> = QS 前 50；边框仍是关键词命中的橙色</div>
+        <div class="meta">教育经历：<b>清华大学</b> 金融学硕士 · <mark class="l2">美股</mark> <mark class="l2">IR</mark> 相关经验</div>
+      </div>
+
+      <div class="card l1 q100">
+        <div class="badge"><span class="sch s100">🎓 QS100</span>命中 · 投资者关系</div>
+        <div class="who"><b>赵先生</b><span>4 年 · 硕士</span></div>
+        <div class="meta">↑ <span style="color:var(--q100);font-weight:600">青色光环</span> = QS 51–100；边框仍是关键词命中的蓝色</div>
+        <div class="meta">教育经历：<b>布里斯托大学</b> 会计与金融 · <mark>投资者关系</mark>相关</div>
+      </div>
+
+      <div class="card q50 qonly" style="margin-bottom:0">
+        <div class="badge"><span class="sch s50">🎓 QS50</span>清华大学</div>
+        <div class="who"><b>孙女士</b><span>3 年 · 硕士 · 应届</span></div>
+        <div class="meta">↑ <b>一个关键词都没命中</b>，但因为是 QS 前 50 名校，照样被单独标出来</div>
+        <div class="meta">教育经历：<b>北京大学</b> 光华管理学院 · 期望职位：证券事务</div>
+      </div>
+    </div>
+
+    <!-- 右：详情 + 清单 -->
+    <div class="pane">
+      <h2>详情浮层（你手动点开后）</h2>
+      <div class="sub">虚线区域框 + 区域内每处关键词都标出位置；名校同样套校色光环</div>
+
+      <div class="detail">
+        <div class="dtbadge">详情 · 🎓 清华大学 · 3 词</div>
+        <h3>王女士 · 投资者关系 VP</h3>
+
+        <div class="sec">
+          <div class="t">个人优势</div>
+          <div class="b">9 年<mark class="l3">美股</mark>上市公司<mark class="l3">投资者关系</mark>与资本市场经验，熟悉 <mark class="l3">IR</mark> 全流程：财报电话会、业绩指引、路演、投资者交流。</div>
+        </div>
+        <div class="hr"></div>
+        <div class="sec">
+          <div class="t">教育经历</div>
+          <div class="b">2014.09 - 2017.06 ｜ <b style="color:var(--q50)">清华大学</b> · 经济管理学院 · 硕士</div>
+        </div>
+        <div class="hr"></div>
+        <div class="sec" style="margin-bottom:0">
+          <div class="t">工作经历</div>
+          <div class="b">
+            2021.06 - 至今 ｜ 某<mark class="l3">美股</mark>上市科技公司 · <mark class="l3">投资者关系</mark>高级经理<br />
+            统筹 <mark class="l3">IR</mark> 团队，对接买方机构 200+ 家，年度路演 30 余场。
+          </div>
+        </div>
+      </div>
+
+      <div class="note" style="margin-top:14px">
+        详情里的命中会<b>自动回填给同名候选人</b>：列表上只看到 1 个词、详情里其实有 3 个 →
+        那张卡片的框自动从<b>蓝升到红</b>；列表上看不出名校、详情里的教育经历有 →
+        卡片自动套上<b>校色光环</b>。
+      </div>
+
+      <div class="divider"></div>
+
+      <h2>右下角清单面板</h2>
+      <div class="sub">排序：QS 名校 → 关键词命中数</div>
+
+      <div class="panel">
+        <div class="hd">
+          <div class="dot"></div><div class="ttl">关键词标注</div>
+          <div class="sp"></div><div class="ico">–</div>
+        </div>
+        <div class="bd">
+          <div class="grid">
+            <div class="cell"><b>30</b><span>本页候选人</span></div>
+            <div class="cell hi"><b>9</b><span>命中</span></div>
+            <div class="cell qs"><b>4</b><span>QS 名校</span></div>
+            <div class="cell ok"><b>2</b><span>已打招呼</span></div>
+          </div>
+          <div class="lgbar">
+            <span><i style="background:var(--c1)"></i>1 个 <b>4</b></span>
+            <span><i style="background:var(--c2)"></i>2 个 <b>3</b></span>
+            <span><i style="background:var(--c3)"></i>3 个+ <b>2</b></span>
+          </div>
+          <div class="lgbar">
+            <span><i style="background:var(--q50)"></i>QS 前 50 <b>2</b></span>
+            <span><i style="background:var(--q100)"></i>QS 前 100 <b>2</b></span>
+          </div>
+          <div class="list">
+            <div class="row s50">
+              <div class="pin" style="background:var(--q50)"></div><div class="nm">孙女士</div>
+              <div class="kwt">🎓 北京大学</div><button>定位</button><button>标记</button>
+            </div>
+            <div class="row s50">
+              <div class="pin" style="background:var(--q50)"></div><div class="nm">刘女士</div>
+              <div class="kwt">🎓 清华大学 · 2 词 · 美股 / IR</div><button>定位</button><button>标记</button>
+            </div>
+            <div class="row s100">
+              <div class="pin" style="background:var(--q100)"></div><div class="nm">赵先生</div>
+              <div class="kwt">🎓 布里斯托大学 · 投资者关系</div><button>定位</button><button>标记</button>
+            </div>
+            <div class="row s100">
+              <div class="pin" style="background:var(--q100)"></div><div class="nm">周先生</div>
+              <div class="kwt">🎓 NTU? · 1 词 · 美股</div><button>定位</button><button>标记</button>
+            </div>
+            <div class="row lv3">
+              <div class="pin" style="background:var(--c3)"></div><div class="nm">王女士</div>
+              <div class="kwt">3 词 · 美股 / IR / 投资者关系</div><button>定位</button><button>标记</button>
+            </div>
+            <div class="row lv2">
+              <div class="pin" style="background:var(--c2)"></div><div class="nm">李先生</div>
+              <div class="kwt">2 词 · 美股 / IR</div><button>定位</button><button>标记</button>
+            </div>
+            <div class="row lv1">
+              <div class="pin" style="background:var(--c1)"></div><div class="nm">张女士</div>
+              <div class="kwt">投资者关系</div><button>定位</button><button>标记</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="note" style="margin-top:14px">
+        注意最上面那行 <b>🎓 NTU?</b> —— <code>NTU</code> 既是<b>南洋理工大学</b>也是<b>台湾大学</b>的缩写，
+        光看缩写分不出来，插件会把结果标成「待确认」（问号 + 取排名更优的那所）。
+        只要简历里写了全名，问号就会消失。鼠标悬停在清单行上能看到完整校名与 QS 名次。
+      </div>
+    </div>
+  </div>
+
+  <div class="lg">
+    <div><i style="background:var(--c1)"></i><b>命中 1 个</b><span>蓝 #2f6fed</span></div>
+    <div><i style="background:var(--c2)"></i><b>命中 2 个</b><span>橙 #e8890c</span></div>
+    <div><i style="background:var(--c3)"></i><b>命中 3 个+</b><span>红 #d93025</span></div>
+    <div><i style="background:var(--q50)"></i><b>QS 前 50</b><span>紫 #7c3aed · 外圈光环</span></div>
+    <div><i style="background:var(--q100)"></i><b>QS 前 100</b><span>青 #0e7490 · 外圈光环</span></div>
+  </div>
+
+  <div class="note">
+    <b>安全边界没变</b>：所有框、角标、关键词高亮都画在独立的悬浮层里，不改页面 DOM。
+    名校判断是<b>纯本地文本比对</b>——QS 2026 前 100 的校名（中英文 + 常用简称，共 428 个别名）
+    硬编码在 <code>qs-rankings.js</code> 里，不联网、不查任何外部接口。
+    代码里依然没有 <code>dispatchEvent</code> / <code>.click()</code> / <code>MouseEvent</code> / <code>scrollTo</code>。
+  </div>
+</div>
+</body>
+</html>
